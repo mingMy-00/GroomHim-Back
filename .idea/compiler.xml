@@ -11,9 +11,8 @@
         <module name="GroomHim-Back.GroomHim-Back.main~1" />
       </profile>
     </annotationProcessing>
-    <bytecodeTargetLevel>
-      <module name="GroomHim-Back.GroomHim-Back.main" target="17" />
-      <module name="GroomHim-Back.GroomHim-Back.test" target="17" />
-    </bytecodeTargetLevel>
+  </component>
+  <component name="JavacSettings">
+    <option name="ADDITIONAL_OPTIONS_STRING" value="-parameters" />
   </component>
 </project>
