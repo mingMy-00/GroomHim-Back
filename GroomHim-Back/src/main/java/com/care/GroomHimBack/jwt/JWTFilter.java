@@ -72,10 +72,5 @@ public class JWTFilter extends OncePerRequestFilter {
 
         //method종료로 그 다음 chain으로 넘겨줌.
         filterChain.doFilter(request, response);
-
-
-
-
     }
-
 }

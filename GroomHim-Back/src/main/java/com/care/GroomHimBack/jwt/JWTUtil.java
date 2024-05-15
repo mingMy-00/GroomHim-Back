@@ -34,6 +34,7 @@ public class JWTUtil {
 
     /*token 생성 method*/
     public String createJwt(String username, String role, long expiredMs) {
+
         return Jwts.builder()
                 .claim("username" , username)
                 .claim("role", role)
