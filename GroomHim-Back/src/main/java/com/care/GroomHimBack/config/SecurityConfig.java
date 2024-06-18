@@ -23,6 +23,7 @@ import java.util.Collections;
 @Configuration
 @EnableWebSecurity
 public class SecurityConfig {
+    //인가작업이나 기본적인 설정을 담당하는 class
 
     private final AuthenticationConfiguration authenticationConfiguration;
 
