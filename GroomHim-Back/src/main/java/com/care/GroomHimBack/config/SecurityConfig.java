@@ -1,8 +1,10 @@
 package com.care.GroomHimBack.config;
 
+import com.care.GroomHimBack.jwt.CustomLogoutFilter;
 import com.care.GroomHimBack.jwt.JWTFilter;
 import com.care.GroomHimBack.jwt.JWTUtil;
 import com.care.GroomHimBack.jwt.LoginFilter;
+import com.care.GroomHimBack.repository.RefreshRepository;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -14,6 +16,7 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.security.web.authentication.logout.LogoutFilter;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 
@@ -29,9 +32,13 @@ public class SecurityConfig {
 
     private final JWTUtil jwtUtil;
 
-    public SecurityConfig(AuthenticationConfiguration authenticationConfiguration, JWTUtil jwtUtil) {
+    private final RefreshRepository refreshRepository;
+
+
+    public SecurityConfig(AuthenticationConfiguration authenticationConfiguration, JWTUtil jwtUtil , RefreshRepository  refreshRepository) {
         this.authenticationConfiguration = authenticationConfiguration;
         this.jwtUtil  = jwtUtil;
+        this.refreshRepository = refreshRepository;
     }
     @Bean
     public AuthenticationManager authenticationManager(AuthenticationConfiguration configuration) throws  Exception {
@@ -78,8 +85,9 @@ public class SecurityConfig {
 
         //특정 경로에 대한 권한 인가작업
         http.authorizeHttpRequests((auth) -> auth
-                .requestMatchers("/login" , "/", "/join").permitAll()
+                .requestMatchers("/login" , "/", "/user/join").permitAll()
                 .requestMatchers("/admin").hasRole("ADMIN")
+                .requestMatchers("/reissue").permitAll()
                 .anyRequest().authenticated());
 
         //session 설정
@@ -91,7 +99,9 @@ public class SecurityConfig {
         http
                 .addFilterBefore(new JWTFilter(jwtUtil), LoginFilter.class);
         http
-                .addFilterAt(new LoginFilter(authenticationManager(authenticationConfiguration), jwtUtil), UsernamePasswordAuthenticationFilter.class);
+                .addFilterAt(new LoginFilter(authenticationManager(authenticationConfiguration), jwtUtil , refreshRepository), UsernamePasswordAuthenticationFilter.class);
+        http
+                .addFilterBefore(new CustomLogoutFilter(jwtUtil, refreshRepository), LogoutFilter.class);
 
         return http.build();
     }
