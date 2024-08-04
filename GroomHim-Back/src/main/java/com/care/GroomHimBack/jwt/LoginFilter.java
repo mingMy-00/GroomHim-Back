@@ -1,19 +1,26 @@
 package com.care.GroomHimBack.jwt;
 
-import com.care.GroomHimBack.dto.CustomUserDetails;
+import com.care.GroomHimBack.entity.AccessToken;
 import com.care.GroomHimBack.entity.RefreshEntity;
+import com.care.GroomHimBack.entity.RefreshToken;
+import com.care.GroomHimBack.repository.AccessTokenRepository;
 import com.care.GroomHimBack.repository.RefreshRepository;
+import com.care.GroomHimBack.repository.RefreshTokenRepository;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import java.io.IOException;
 import java.sql.Date;
+import java.util.HashMap;
+import java.util.Map;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.token.TokenService;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 import java.util.Collection;
@@ -25,12 +32,14 @@ public class LoginFilter extends UsernamePasswordAuthenticationFilter {
 
     private final JWTUtil jwtUtil;
 
-    private RefreshRepository refreshRepository;
+    private final RefreshTokenRepository refreshTokenRepository;
+    private final AccessTokenRepository accessTokenRepository;
 
-    public LoginFilter(AuthenticationManager authenticationManager, JWTUtil jwtUtil , RefreshRepository refreshRepository) {
+    public LoginFilter(AuthenticationManager authenticationManager, JWTUtil jwtUtil , RefreshTokenRepository refreshTokenRepository , AccessTokenRepository accessTokenRepository) {
         this.authenticationManager = authenticationManager;
         this.jwtUtil = jwtUtil;
-        this.refreshRepository = refreshRepository;
+        this.refreshTokenRepository = refreshTokenRepository;
+        this.accessTokenRepository = accessTokenRepository;
     }
 
     @Override
@@ -58,8 +67,14 @@ public class LoginFilter extends UsernamePasswordAuthenticationFilter {
         String access  = jwtUtil.createJwt("access", username, role, 600000L);
         String refresh = jwtUtil.createJwt("refresh", username, role, 86400000L);
 
+        //Redis에 저장
+        RefreshToken refreshRedis = new RefreshToken(refresh, username);
+        AccessToken  accessRedis  = new AccessToken(access, username);
+        refreshTokenRepository.save(refreshRedis);
+        accessTokenRepository.save(accessRedis);
+
         //refreshToken 저장
-        addRefreshEntity(username , refresh, 86400000L);
+        //addRefreshEntity(username , refresh, 86400000L);
 
         //응답 설정
         response.setHeader("access", access);
@@ -73,17 +88,17 @@ public class LoginFilter extends UsernamePasswordAuthenticationFilter {
         response.setStatus(401);
     }
 
-    private void addRefreshEntity(String username, String refresh, Long expiredMs) {
-
-        Date date = new Date(System.currentTimeMillis() + expiredMs);
-
-        RefreshEntity refreshEntity = new RefreshEntity();
-        refreshEntity.setUsername(username);
-        refreshEntity.setRefresh(refresh);
-        refreshEntity.setExpiration(date.toString());
-
-        refreshRepository.save(refreshEntity);
-    }
+//    private void addRefreshEntity(String username, String refresh, Long expiredMs) {
+//
+//        Date date = new Date(System.currentTimeMillis() + expiredMs);
+//
+//        RefreshEntity refreshEntity = new RefreshEntity();
+//        refreshEntity.setUsername(username);
+//        refreshEntity.setRefresh(refresh);
+//        refreshEntity.setExpiration(date.toString());
+//
+//        refreshRepository.save(refreshEntity);
+//}
 
     private Cookie createCookie(String key, String value) {
 

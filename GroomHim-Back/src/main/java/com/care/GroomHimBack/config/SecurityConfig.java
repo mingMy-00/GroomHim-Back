@@ -1,10 +1,14 @@
 package com.care.GroomHimBack.config;
 
+import com.care.GroomHimBack.entity.AccessToken;
 import com.care.GroomHimBack.jwt.CustomLogoutFilter;
 import com.care.GroomHimBack.jwt.JWTFilter;
 import com.care.GroomHimBack.jwt.JWTUtil;
 import com.care.GroomHimBack.jwt.LoginFilter;
+import com.care.GroomHimBack.repository.AccessTokenRepository;
 import com.care.GroomHimBack.repository.RefreshRepository;
+import com.care.GroomHimBack.repository.RefreshTokenRepository;
+import com.care.GroomHimBack.service.TokenService;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -32,13 +36,18 @@ public class SecurityConfig {
 
     private final JWTUtil jwtUtil;
 
-    private final RefreshRepository refreshRepository;
+    private final RefreshTokenRepository refreshTokenRepository;
 
+    private final AccessTokenRepository accessTokenRepository;
 
-    public SecurityConfig(AuthenticationConfiguration authenticationConfiguration, JWTUtil jwtUtil , RefreshRepository  refreshRepository) {
+    private final TokenService tokenService;
+
+    public SecurityConfig(AuthenticationConfiguration authenticationConfiguration, JWTUtil jwtUtil , RefreshTokenRepository  refreshTokenRepository, AccessTokenRepository accessTokenRepository,TokenService tokenService) {
         this.authenticationConfiguration = authenticationConfiguration;
         this.jwtUtil  = jwtUtil;
-        this.refreshRepository = refreshRepository;
+        this.refreshTokenRepository = refreshTokenRepository;
+        this.accessTokenRepository = accessTokenRepository;
+        this.tokenService = tokenService;
     }
     @Bean
     public AuthenticationManager authenticationManager(AuthenticationConfiguration configuration) throws  Exception {
@@ -99,9 +108,9 @@ public class SecurityConfig {
         http
                 .addFilterBefore(new JWTFilter(jwtUtil), LoginFilter.class);
         http
-                .addFilterAt(new LoginFilter(authenticationManager(authenticationConfiguration), jwtUtil , refreshRepository), UsernamePasswordAuthenticationFilter.class);
+                .addFilterAt(new LoginFilter(authenticationManager(authenticationConfiguration), jwtUtil , refreshTokenRepository , accessTokenRepository), UsernamePasswordAuthenticationFilter.class);
         http
-                .addFilterBefore(new CustomLogoutFilter(jwtUtil, refreshRepository), LogoutFilter.class);
+                .addFilterBefore(new CustomLogoutFilter(jwtUtil, tokenService), LogoutFilter.class);
 
         return http.build();
     }

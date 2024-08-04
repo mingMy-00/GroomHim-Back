@@ -1,8 +1,12 @@
 package com.care.GroomHimBack.controller;
 
+import com.care.GroomHimBack.entity.AccessToken;
 import com.care.GroomHimBack.entity.RefreshEntity;
+import com.care.GroomHimBack.entity.RefreshToken;
 import com.care.GroomHimBack.jwt.JWTUtil;
 import com.care.GroomHimBack.repository.RefreshRepository;
+import com.care.GroomHimBack.repository.RefreshTokenRepository;
+import com.care.GroomHimBack.service.TokenService;
 import io.jsonwebtoken.ExpiredJwtException;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
@@ -16,11 +20,13 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 public class ReissueController {
     private final JWTUtil jwtUtil;
-    private final RefreshRepository refreshRepository;
+    private final RefreshTokenRepository refreshtokenRepository;
+    private final TokenService tokenService;
 
-    public ReissueController(JWTUtil jwtUtil , RefreshRepository refreshRepository) {
+    public ReissueController(JWTUtil jwtUtil , RefreshTokenRepository refreshtokenRepository, TokenService tokenService) {
       this.jwtUtil = jwtUtil;
-      this.refreshRepository = refreshRepository;
+      this.refreshtokenRepository = refreshtokenRepository;
+      this.tokenService = tokenService;
     }
 
     @PostMapping("/reissue")
@@ -63,7 +69,7 @@ public class ReissueController {
 
 
       //DB에 저장되어 있는지 확인
-      Boolean isExist = refreshRepository.existsByRefresh(refresh);
+      Boolean isExist = tokenService.findRefreshToken(refresh);
       if (!isExist) {
         //response body
         return new ResponseEntity<>("invalid refresh token", HttpStatus.BAD_REQUEST);
@@ -77,8 +83,12 @@ public class ReissueController {
       String newRefresh = jwtUtil.createJwt("refresh", username, role, 86400000L);
 
       //Refresh 토큰 저장 DB에 기존의 Refresh 토큰 삭제 후 새 Refresh 토큰 저장
-      refreshRepository.deleteByRefresh(refresh);
-      addRefreshEntity(username, newRefresh, 86400000L);
+      tokenService.deleteRefreshToken(refresh);
+      //addRefreshEntity(username, newRefresh, 86400000L);
+
+      //Redis에 저장
+      RefreshToken refreshRedis = new RefreshToken(refresh, username);
+      refreshtokenRepository.save(refreshRedis);
 
       //response
       response.setHeader("access", newAccess);
@@ -86,7 +96,7 @@ public class ReissueController {
 
       return new ResponseEntity<>(HttpStatus.OK);
     }
-
+/*
       private void addRefreshEntity(String username, String refresh, Long expiredMs) {
 
         Date date = new Date(System.currentTimeMillis() + expiredMs);
@@ -98,7 +108,7 @@ public class ReissueController {
 
         refreshRepository.save(refreshEntity);
       }
-
+*/
     private Cookie createCookie(String key, String value) {
 
       Cookie cookie = new Cookie(key, value);
